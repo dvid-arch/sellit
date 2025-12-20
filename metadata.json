@@ -1,0 +1,7 @@
+{
+  "name": "Sellitback - Campus Marketplace",
+  "description": "A vibrant campus-exclusive marketplace for students to buy and sell items within their community. Features Gemini-powered automated listing descriptions.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
