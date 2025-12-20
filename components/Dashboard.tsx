@@ -7,7 +7,7 @@ import {
   ArrowRight, Bot, ShieldQuestion, Clock, Zap, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { Logo } from '../constants.tsx';
-import { User, Listing, Chat, Offer, ViewRecord } from '../types.ts';
+import { User, Listing, Chat, Offer, ViewRecord, Notification } from '../types.ts';
 import { ListingForm } from './ListingForm.tsx';
 import { ProductDetail } from './ProductDetail.tsx';
 import { BroadcastForm } from './BroadcastForm.tsx';
@@ -44,23 +44,52 @@ const INITIAL_CHATS: Chat[] = [
     messages: [
       { id: 's1', text: 'Hello! This is the human support desk. If you have issues with payments, escrow, or safety, we are here to help.', timestamp: '09:00', senderId: 'them', agentName: 'Official Bot' }
     ]
+  }
+];
+
+const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: '1',
+    type: 'match',
+    title: 'New Match for your Broadcast!',
+    message: 'Someone just listed a "2-Burner Gas Stove" that matches your request in Moremi Hall.',
+    time: '2 mins ago',
+    isRead: false,
+    relatedImage: 'https://images.unsplash.com/photo-1521203050033-780598859941?w=150',
+    actionLabel: 'View Match',
+    actionPayload: { type: 'view_listing', id: '1' }
   },
   {
-    id: 'chat_1',
-    contactName: 'Jane Darwin',
-    contactAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    lastSeen: 'last seen 5 mins ago',
-    lastMessage: 'Yes, it\'s still available.',
-    lastMessageTime: '18:17',
-    product: {
-      title: 'Mini Refrigerator',
-      price: 65000,
-      imageUrl: 'https://images.unsplash.com/photo-1571175452281-04a282879717?w=150'
-    },
-    messages: [
-      { id: 'm1', text: 'Hi! Is this still available?', timestamp: '18:16', senderId: 'me' },
-      { id: 'm2', text: "Yes, it is.", timestamp: '18:17', senderId: 'them' },
-    ]
+    id: '2',
+    type: 'price_drop',
+    title: 'Price Drop Alert!',
+    message: 'The "Mini Refrigerator" you viewed is now N65,000 (was N75,000).',
+    time: '1 hour ago',
+    isRead: false,
+    relatedImage: 'https://images.unsplash.com/photo-1571175452281-04a282879717?w=150',
+    actionLabel: 'Check Deal',
+    actionPayload: { type: 'view_listing', id: '1' }
+  },
+  {
+    id: '3',
+    type: 'offer',
+    title: 'New Offer Received',
+    message: 'A student made an offer of N250,000 for your "HP Laptop".',
+    time: '3 hours ago',
+    isRead: true,
+    relatedImage: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=150',
+    actionLabel: 'Review Offer',
+    actionPayload: { type: 'view_offer', id: 'offer_1' }
+  },
+  {
+    id: '4',
+    type: 'trending',
+    title: 'Trending on Campus',
+    message: 'Scientific calculators are in high demand this week! Got one to sell?',
+    time: '5 hours ago',
+    isRead: true,
+    actionLabel: 'Post Listing',
+    actionPayload: { type: 'navigate_tab', tab: 'Add Product' }
   }
 ];
 
@@ -93,19 +122,6 @@ const MOCK_LISTINGS: Listing[] = [
     status: 'available',
     viewCount: 120,
     offerCount: 1
-  },
-  {
-    id: '3',
-    title: 'Scientific Calculator',
-    price: 5000,
-    category: 'Books',
-    description: 'Trusted model for science students. Works perfectly with no scratches.',
-    imageUrl: 'https://images.unsplash.com/photo-1543674892-7d64d45df18b?q=80&w=800&auto=format&fit=crop',
-    seller: 'Samuel K.',
-    location: 'NDDC Hostel',
-    status: 'available',
-    viewCount: 58,
-    offerCount: 0
   }
 ];
 
@@ -113,6 +129,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('Home');
   const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
   const [allOffers, setAllOffers] = useState<Offer[]>([]);
   const [savedItems, setSavedItems] = useState<string[]>([]);
   const [viewHistory, setViewHistory] = useState<ViewRecord[]>([]);
@@ -151,21 +168,72 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       .slice(0, 8);
   }, [viewHistory, listings]);
 
+  // Fix: Added missing filteredListings useMemo hook to handle search, category filtering and sorting
+  const filteredListings = useMemo(() => {
+    let result = [...listings];
+    if (selectedCategory !== 'All Categories') {
+      result = result.filter(l => l.category === selectedCategory);
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(l => 
+        l.title.toLowerCase().includes(query) ||
+        l.description.toLowerCase().includes(query)
+      );
+    }
+    
+    const sorted = [...result];
+    if (sortBy === 'Price: Low to High') {
+      sorted.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'Price: High to Low') {
+      sorted.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'Urgent First') {
+      sorted.sort((a, b) => (b.isUrgent ? -1 : 1) - (a.isUrgent ? -1 : 1));
+    } else {
+      // Default: Boosted first, then ID
+      sorted.sort((a, b) => {
+        if (a.isBoosted && !b.isBoosted) return -1;
+        if (!a.isBoosted && b.isBoosted) return 1;
+        return b.id.localeCompare(a.id);
+      });
+    }
+    return sorted;
+  }, [listings, selectedCategory, searchQuery, sortBy]);
+
+  // Fix: Added missing searchSuggestions useMemo hook for the smart search dropdown
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const suggestions: { label: string; type: 'category' | 'listing' | 'ai' | 'trending'; extra?: string }[] = [];
+    
+    const categoryMatches = categories.filter(c => 
+      c !== 'All Categories' && c.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    categoryMatches.forEach(c => suggestions.push({ label: c, type: 'category' }));
+
+    const listingMatches = listings.filter(l => 
+      l.title.toLowerCase().includes(searchQuery.toLowerCase())
+    ).slice(0, 3);
+    listingMatches.forEach(l => suggestions.push({ label: l.title, type: 'listing', extra: `₦${l.price.toLocaleString()}` }));
+
+    if (searchQuery.length > 2) {
+      suggestions.push({ label: `Ask AI: "${searchQuery}"`, type: 'ai' });
+    }
+    
+    return suggestions;
+  }, [searchQuery, listings, categories]);
+
   const loadData = useCallback(() => {
     setIsLoading(true);
     setLoadError(false);
-    // Simulate real network request
     setTimeout(() => {
-        // Mock occasional failure to test resilience
-        if (Math.random() < 0.05) {
+        if (Math.random() < 0.02) {
             setLoadError(true);
             setIsLoading(false);
-            showToast('Sync Error', 'Could not refresh campus feed. Check your connection.', 'error');
         } else {
             setIsLoading(false);
         }
     }, 800);
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     const sidebarTimer = setTimeout(() => setIsSidebarExpanded(false), 1500);
@@ -244,140 +312,70 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setIsAssistantOpen(false);
     setActiveChatId(SUPPORT_CHAT_ID);
     setActiveTab('Messages');
-    
-    setChats(prev => prev.map(c => 
-      c.id === SUPPORT_CHAT_ID 
-      ? { ...c, supportMeta: { ...c.supportMeta!, queuePosition: 2, estimatedWaitMinutes: 3 } } 
-      : c
-    ));
-
     showToast('Connecting to Support', 'A human agent will be with you in ~3 mins.', 'info');
   };
 
-  const handleMakeOffer = (amount: number, message: string) => {
-    if (!selectedListing) return;
-    const newOffer: Offer = {
-      id: `offer_${Date.now()}`,
-      listingId: selectedListing.id,
-      listingTitle: selectedListing.title,
-      listingImage: selectedListing.imageUrl,
-      originalPrice: selectedListing.price,
-      offeredPrice: amount,
-      buyerName: user?.name || 'Obokobong',
-      buyerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-      message,
-      status: 'pending',
-      timestamp: 'Just now'
-    };
-    setAllOffers(prev => [newOffer, ...prev]);
-    setListings(prev => prev.map(l => l.id === selectedListing.id ? { ...l, offerCount: (l.offerCount || 0) + 1 } : l));
-  };
-
-  const handleWithdrawOffer = (offerId: string) => {
-    setAllOffers(prev => prev.filter(o => o.id !== offerId));
-  };
-
-  const handleMarkSold = (listingId: string) => {
-    setListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'sold' } : l));
-    setSelectedListing(prev => prev && prev.id === listingId ? { ...prev, status: 'sold' } : prev);
-    showToast('Success', 'Item marked as sold and moved to history.', 'success');
-  };
-
-  const handleCommitToBuy = (amount: number) => {
-    if (!selectedListing) return;
-    setListings(prev => prev.map(l => l.id === selectedListing.id ? { ...l, status: 'committed' } : l));
-    setSelectedListing(prev => prev && prev.id === selectedListing.id ? { ...prev, status: 'committed' } : prev);
-  };
-
-  const handleBoostListing = (listingId: string) => {
-    setListings(prev => prev.map(l => l.id === listingId ? { ...l, isBoosted: true } : l));
-    showToast('Success', 'Your ad is now pinned to the top!', 'success');
-  };
-
-  const handleDeleteListing = (listingId: string) => {
-    setListings(prev => prev.filter(l => l.id !== listingId));
-    showToast('Deleted', 'Listing removed successfully.', 'info');
-  };
-
-  const handleEditListingSubmit = (updatedData: any) => {
-    setListings(prev => prev.map(l => l.id === updatedData.id ? { ...l, ...updatedData } : l));
-    setEditingListing(null);
-  };
-
-  const handleSelectSuggestion = async (suggestion: any) => {
-    if (suggestion.type === 'ai') {
-      setIsAssistantOpen(true);
-      setShowSearchSuggestions(false);
-      return;
+  const handleNotificationAction = (payload: any) => {
+    switch (payload.type) {
+      case 'view_listing':
+        const listing = listings.find(l => l.id === payload.id);
+        if (listing) handleOpenProduct(listing);
+        else showToast('Not Found', 'This item is no longer available.', 'error');
+        break;
+      case 'view_offer':
+        setActiveTab('Profile');
+        // In a real app, you'd scroll to the offer or open the offer modal
+        showToast('Reviewing Offer', 'Scroll to your active offers below.', 'info');
+        break;
+      case 'navigate_tab':
+        setActiveTab(payload.tab);
+        if (payload.tab === 'Home') scrollToGrid();
+        break;
+      default:
+        console.warn('Unhandled notification action', payload);
     }
-    
-    setSearchQuery(suggestion.label);
-    setShowSearchSuggestions(false);
-    setSelectedListing(null);
-    if (activeTab !== 'Home' || showBroadcastForm) {
-      setActiveTab('Home');
-      setShowBroadcastForm(false);
-    }
-    setTimeout(scrollToGrid, 150);
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleMarkRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const handleClearNotifications = () => {
+    setNotifications([]);
+  };
+
+  // Fix: Added missing handleSelectSuggestion function to handle search dropdown clicks
+  const handleSelectSuggestion = (suggestion: any) => {
     if (suggestion.type === 'category') {
       setSelectedCategory(suggestion.label);
+      setSearchQuery('');
+    } else if (suggestion.type === 'listing') {
+      setSearchQuery(suggestion.label);
+    } else if (suggestion.type === 'ai') {
+      setIsAssistantOpen(true);
     }
+    setShowSearchSuggestions(false);
   };
-
-  const searchSuggestions = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    
-    const suggestions: { label: string; type: 'category' | 'listing' | 'ai' | 'trending'; extra?: string }[] = [];
-    
-    suggestions.push({ 
-      label: `Ask AI about "${searchQuery}"`, 
-      type: 'ai' 
-    });
-
-    categories.filter(c => c !== 'All Categories' && c.toLowerCase().includes(searchQuery.toLowerCase()))
-      .forEach(c => suggestions.push({ label: c, type: 'category' }));
-
-    listings.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()))
-      .slice(0, 3)
-      .forEach(l => suggestions.push({ 
-        label: l.title, 
-        type: 'listing', 
-        extra: `₦${l.price.toLocaleString()}` 
-      }));
-
-    return suggestions;
-  }, [searchQuery, listings, categories]);
-
-  const filteredListings = useMemo(() => {
-    let result = listings.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           item.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'All Categories' || item.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-
-    if (sortBy === 'Price: Low to High') result.sort((a, b) => a.price - b.price);
-    else if (sortBy === 'Price: High to Low') result.sort((a, b) => b.price - a.price);
-    else if (sortBy === 'Urgent First') result.sort((a, b) => (b.isUrgent ? 1 : 0) - (a.isUrgent ? 1 : 0));
-
-    if (sortBy === 'Newest') {
-        result.sort((a, b) => (b.isBoosted ? 1 : 0) - (a.isBoosted ? 1 : 0));
-    }
-
-    return result;
-  }, [listings, searchQuery, selectedCategory, sortBy]);
 
   const navItems = [
     { name: 'Home', icon: Home },
     { name: 'Broadcasts', icon: Radio },
     { name: 'Add Product', icon: Plus, isPrimary: true },
-    { name: 'Notifications', icon: Bell },
+    { name: 'Notifications', icon: Bell, count: notifications.filter(n => !n.isRead).length },
     { name: 'Messages', icon: MessageSquare },
   ];
 
   const renderContent = () => {
     if (showBroadcastForm) return <div className="p-4 md:p-8"><BroadcastForm onBack={() => setShowBroadcastForm(false)} /></div>;
-    if (editingListing) return <ListingForm initialData={editingListing} onClose={() => setEditingListing(null)} onSubmit={handleEditListingSubmit} />;
+    if (editingListing) return <ListingForm initialData={editingListing} onClose={() => setEditingListing(null)} onSubmit={(l) => { setListings(prev => prev.map(old => old.id === l.id ? l : old)); setEditingListing(null); }} />;
     
     switch (activeTab) {
       case 'Broadcasts':
@@ -385,7 +383,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       case 'Add Product':
         return <ListingForm onClose={() => setActiveTab('Home')} onSubmit={(l) => { setListings([{ ...l, id: Date.now().toString(), status: 'available', seller: user?.name || 'Obokobong', viewCount: 0, offerCount: 0 }, ...listings]); setActiveTab('Home'); }} />;
       case 'Notifications':
-        return <div className="p-4 md:p-8"><NotificationsView onAction={(p) => { if(p.type === 'view_listing') handleOpenProduct(listings[0]); }} /></div>;
+        return (
+          <NotificationsView 
+            notifications={notifications} 
+            onAction={handleNotificationAction} 
+            onMarkAllRead={handleMarkAllRead}
+            onDelete={handleDeleteNotification}
+            onMarkRead={handleMarkRead}
+            onClearAll={handleClearNotifications}
+          />
+        );
       case 'Messages':
         return <ChatView chats={chats} activeChatId={activeChatId} onSelectChat={setActiveChatId} onSendMessage={(chatId, text) => {
           setChats(prev => prev.map(c => c.id === chatId ? { ...c, messages: [...c.messages, { id: Date.now().toString(), text, timestamp: 'now', senderId: 'me' }], lastMessage: text } : c));
@@ -396,9 +403,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           listings={listings.filter(l => l.seller === (user?.name || 'Obokobong'))} 
           offers={allOffers}
           onEditListing={(l) => { setEditingListing(l); }}
-          onDeleteListing={handleDeleteListing}
-          onMarkSold={handleMarkSold}
-          onBoostListing={handleBoostListing}
+          onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
+          onMarkSold={(id) => setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'sold' } : l))}
+          onBoostListing={(id) => setListings(prev => prev.map(l => l.id === id ? { ...l, isBoosted: true } : l))}
           onAddProductClick={() => setActiveTab('Add Product')}
           onOpenListing={handleOpenProduct}
         />;
@@ -567,12 +574,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   };
 
-  const currentOffer = selectedListing ? allOffers.find(o => o.listingId === selectedListing.id && o.buyerName === (user?.name || 'Obokobong')) : undefined;
-  const receivedOffers = selectedListing ? allOffers.filter(o => o.listingId === selectedListing.id && o.buyerName !== (user?.name || 'Obokobong')) : [];
-  const isSelectedOwner = selectedListing ? selectedListing.seller === (user?.name || 'Obokobong') : false;
-  const existingChat = selectedListing ? chats.find(c => c.contactName === selectedListing.seller && c.product?.title === selectedListing.title) : undefined;
-  const lastViewedPrice = selectedListing ? viewHistory.find(v => v.listingId === selectedListing.id)?.lastViewedPrice : undefined;
-
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#F8FAFB] overflow-hidden">
       <aside className={`hidden md:flex bg-white border-r border-gray-100 flex-col shrink-0 z-40 transition-all duration-500 ${isSidebarExpanded ? 'w-64' : 'w-24'}`}>
@@ -600,9 +601,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             const isActive = activeTab === item.name && !showBroadcastForm && !editingListing;
             const Icon = item.icon;
             return (
-              <button key={item.name} onClick={() => { setActiveTab(item.name); setShowBroadcastForm(false); setEditingListing(null); setSelectedListing(null); }} className={`flex items-center font-black transition-all duration-300 ${isSidebarExpanded ? `w-full p-4 rounded-2xl gap-4 ${isActive ? 'bg-sellit text-white shadow-xl shadow-sellit/20 translate-x-1' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}` : `p-4 rounded-2xl justify-center ${isActive ? 'bg-sellit text-white shadow-xl shadow-sellit/20 scale-110' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}`}>
+              <button key={item.name} onClick={() => { setActiveTab(item.name); setShowBroadcastForm(false); setEditingListing(null); setSelectedListing(null); }} className={`relative flex items-center font-black transition-all duration-300 ${isSidebarExpanded ? `w-full p-4 rounded-2xl gap-4 ${isActive ? 'bg-sellit text-white shadow-xl shadow-sellit/20 translate-x-1' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}` : `p-4 rounded-2xl justify-center ${isActive ? 'bg-sellit text-white shadow-xl shadow-sellit/20 scale-110' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}`}>
                 <Icon size={24} className="shrink-0" />
                 {isSidebarExpanded && <span className="text-sm uppercase tracking-wider">{item.name}</span>}
+                {item.count !== undefined && item.count > 0 && (
+                  <span className={`absolute ${isSidebarExpanded ? 'right-4' : 'top-2 right-2'} w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white`}>
+                    {item.count}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -624,8 +630,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               );
             }
             return (
-              <button key={item.name} onClick={() => { setActiveTab(item.name); setShowBroadcastForm(false); setEditingListing(null); setSelectedListing(null); }} className={`flex flex-col items-center justify-center transition-all ${isActive ? 'text-sellit' : 'text-gray-400'}`}>
-                <div className="p-1"><Icon size={28} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'} /></div>
+              <button key={item.name} onClick={() => { setActiveTab(item.name); setShowBroadcastForm(false); setEditingListing(null); setSelectedListing(null); }} className={`flex flex-col items-center justify-center transition-all relative ${isActive ? 'text-sellit' : 'text-gray-400'}`}>
+                <div className="p-1">
+                  <Icon size={28} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+                  {item.count !== undefined && item.count > 0 && (
+                    <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[8px] font-black border border-white">
+                      {item.count}
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -636,7 +649,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <header className="h-16 md:h-20 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-10 shrink-0 z-50">
           <div className="flex-1 max-w-2xl relative" ref={searchRef}>
             <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${showSearchSuggestions ? 'text-sellit' : 'text-gray-400'}`} size={18} />
-            <input type="text" placeholder="Search anything on campus..." value={searchQuery} onFocus={() => setShowSearchSuggestions(true)} onChange={(e) => { setSearchQuery(e.target.value); setShowSearchSuggestions(true); }} onKeyDown={async (e) => { if (e.key === 'Enter') { setShowSearchSuggestions(false); setSelectedListing(null); if (activeTab !== 'Home' || showBroadcastForm) { setActiveTab('Home'); setShowBroadcastForm(false); } setTimeout(scrollToGrid, 100); const interpreted = await geminiService.interpretSearch(searchQuery); if (interpreted.category) setSelectedCategory(interpreted.category); } }} className="w-full pl-12 pr-4 py-2.5 md:py-3.5 bg-gray-50 border-none rounded-2xl text-sm md:text-base outline-none focus:ring-4 focus:ring-sellit/5 transition-all font-bold text-gray-900 placeholder:text-gray-400 shadow-inner" />
+            <input type="text" placeholder="Search anything on campus..." value={searchQuery} onFocus={() => setShowSearchSuggestions(true)} onChange={(e) => { setSearchQuery(e.target.value); setShowSearchSuggestions(true); }} className="w-full pl-12 pr-4 py-2.5 md:py-3.5 bg-gray-50 border-none rounded-2xl text-sm md:text-base outline-none focus:ring-4 focus:ring-sellit/5 transition-all font-bold text-gray-900 placeholder:text-gray-400 shadow-inner" />
             {showSearchSuggestions && searchSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-3 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5">
                 <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
@@ -685,7 +698,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-[100] bg-sellit text-white w-14 h-14 md:w-16 md:h-16 rounded-[1.75rem] shadow-2xl shadow-sellit/40 flex items-center justify-center hover:scale-110 active:scale-90 transition-all group"
           >
             <Sparkles size={28} className="group-hover:rotate-12 transition-transform" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full" />
           </button>
         )}
 
@@ -693,7 +705,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       </div>
       {selectedListing && (
         <ProductDetail 
-          listing={selectedListing} userOffer={currentOffer} receivedOffers={receivedOffers} existingChat={existingChat} lastViewedPrice={lastViewedPrice} isOwner={isSelectedOwner} isSaved={savedItems.includes(selectedListing.id)} onClose={() => setSelectedListing(null)} onContact={() => { startChat(selectedListing.seller, 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', { title: selectedListing.title, price: selectedListing.price, imageUrl: selectedListing.imageUrl }); setSelectedListing(null); }} onMakeOffer={handleMakeOffer} onWithdrawOffer={handleWithdrawOffer} onToggleSave={toggleSave} onMarkSold={handleMarkSold} onEdit={() => { setEditingListing(selectedListing); setSelectedListing(null); }} onDelete={() => { handleDeleteListing(selectedListing.id); setSelectedListing(null); }} onCommitToBuy={handleCommitToBuy}
+          listing={selectedListing} 
+          isOwner={selectedListing.seller === (user?.name || 'Obokobong')} 
+          onClose={() => setSelectedListing(null)} 
+          onContact={() => { startChat(selectedListing.seller, 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', { title: selectedListing.title, price: selectedListing.price, imageUrl: selectedListing.imageUrl }); setSelectedListing(null); }} 
+          onMarkSold={(id) => { setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'sold' } : l)); setSelectedListing(null); showToast('Success', 'Item marked as sold.', 'success'); }}
+          onEdit={() => { setEditingListing(selectedListing); setSelectedListing(null); }}
         />
       )}
     </div>
