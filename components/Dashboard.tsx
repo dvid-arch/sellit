@@ -80,16 +80,22 @@ const MOCK_NOTIFICATIONS: Notification[] = [
     relatedImage: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=150',
     actionLabel: 'Review Offer',
     actionPayload: { type: 'view_offer', id: 'offer_1' }
-  },
+  }
+];
+
+const MOCK_OFFERS: Offer[] = [
   {
-    id: '4',
-    type: 'trending',
-    title: 'Trending on Campus',
-    message: 'Scientific calculators are in high demand this week! Got one to sell?',
-    time: '5 hours ago',
-    isRead: true,
-    actionLabel: 'Post Listing',
-    actionPayload: { type: 'navigate_tab', tab: 'Add Product' }
+    id: 'offer_1',
+    listingId: '2',
+    listingTitle: 'HP Laptop',
+    listingImage: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=800&auto=format&fit=crop',
+    originalPrice: 275000,
+    offeredPrice: 250000,
+    buyerName: 'David Uzo',
+    buyerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    message: 'I really need this for my engineering projects. Can we do 250k? I can meet today.',
+    status: 'pending',
+    timestamp: '3 hours ago'
   }
 ];
 
@@ -130,7 +136,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [allOffers, setAllOffers] = useState<Offer[]>([]);
+  const [allOffers, setAllOffers] = useState<Offer[]>(MOCK_OFFERS);
   const [savedItems, setSavedItems] = useState<string[]>([]);
   const [viewHistory, setViewHistory] = useState<ViewRecord[]>([]);
   
@@ -168,7 +174,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       .slice(0, 8);
   }, [viewHistory, listings]);
 
-  // Fix: Added missing filteredListings useMemo hook to handle search, category filtering and sorting
   const filteredListings = useMemo(() => {
     let result = [...listings];
     if (selectedCategory !== 'All Categories') {
@@ -190,7 +195,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     } else if (sortBy === 'Urgent First') {
       sorted.sort((a, b) => (b.isUrgent ? -1 : 1) - (a.isUrgent ? -1 : 1));
     } else {
-      // Default: Boosted first, then ID
       sorted.sort((a, b) => {
         if (a.isBoosted && !b.isBoosted) return -1;
         if (!a.isBoosted && b.isBoosted) return 1;
@@ -200,7 +204,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return sorted;
   }, [listings, selectedCategory, searchQuery, sortBy]);
 
-  // Fix: Added missing searchSuggestions useMemo hook for the smart search dropdown
   const searchSuggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const suggestions: { label: string; type: 'category' | 'listing' | 'ai' | 'trending'; extra?: string }[] = [];
@@ -226,12 +229,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setIsLoading(true);
     setLoadError(false);
     setTimeout(() => {
-        if (Math.random() < 0.02) {
-            setLoadError(true);
-            setIsLoading(false);
-        } else {
-            setIsLoading(false);
-        }
+        setIsLoading(false);
     }, 800);
   }, []);
 
@@ -308,6 +306,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setActiveTab('Messages');
   }, [chats]);
 
+  const handleAcceptOffer = useCallback((offer: Offer) => {
+    // Immediate state update for smooth UX
+    setAllOffers(prev => prev.map(o => o.id === offer.id ? { ...o, status: 'accepted' } : o));
+    setListings(prev => prev.map(l => l.id === offer.listingId ? { ...l, status: 'committed' } : l));
+    
+    // Auto-create chat specifically for this negotiation to close the deal
+    const chatId = `chat_negotiation_${offer.id}`;
+    const buyerFirstName = offer.buyerName.split(' ')[0];
+    
+    const newChat: Chat = {
+      id: chatId,
+      contactName: offer.buyerName,
+      contactAvatar: offer.buyerAvatar,
+      lastSeen: 'Negotiating',
+      lastMessage: `Offer of ₦${offer.offeredPrice.toLocaleString()} accepted!`,
+      lastMessageTime: 'Just now',
+      product: {
+        title: offer.listingTitle,
+        price: offer.offeredPrice,
+        imageUrl: offer.listingImage
+      },
+      messages: [
+        { 
+          id: `sys_${Date.now()}`, 
+          text: `You accepted ${buyerFirstName}'s offer! Chat now to arrange a meetup location.`, 
+          timestamp: 'now', 
+          senderId: 'them' 
+        },
+        { 
+          id: `m_${Date.now()}`, 
+          text: `Hi ${buyerFirstName}, I've accepted your offer. When can you meet at the student union for inspection?`, 
+          timestamp: 'now', 
+          senderId: 'me' 
+        }
+      ]
+    };
+
+    setChats(prev => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+    setActiveTab('Messages');
+    showToast('Offer Accepted', `Starting checkout chat with ${buyerFirstName}`, 'success');
+  }, [showToast]);
+
   const handleSwitchToSupport = () => {
     setIsAssistantOpen(false);
     setActiveChatId(SUPPORT_CHAT_ID);
@@ -324,7 +365,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         break;
       case 'view_offer':
         setActiveTab('Profile');
-        // In a real app, you'd scroll to the offer or open the offer modal
         showToast('Reviewing Offer', 'Scroll to your active offers below.', 'info');
         break;
       case 'navigate_tab':
@@ -352,7 +392,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setNotifications([]);
   };
 
-  // Fix: Added missing handleSelectSuggestion function to handle search dropdown clicks
   const handleSelectSuggestion = (suggestion: any) => {
     if (suggestion.type === 'category') {
       setSelectedCategory(suggestion.label);
@@ -408,6 +447,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           onBoostListing={(id) => setListings(prev => prev.map(l => l.id === id ? { ...l, isBoosted: true } : l))}
           onAddProductClick={() => setActiveTab('Add Product')}
           onOpenListing={handleOpenProduct}
+          onAcceptOffer={handleAcceptOffer}
         />;
       default:
         return (
@@ -692,10 +732,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </header>
         <main ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto scrollbar-hide relative bg-[#F8FAFB] scroll-smooth">{renderContent()}</main>
         
-        {!isAssistantOpen && (
+        {/* Hide floating AI button on Messages tab to avoid collision and redundancy with Human Desk */}
+        {!isAssistantOpen && activeTab !== 'Messages' && (
           <button 
             onClick={() => setIsAssistantOpen(true)}
-            className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-[100] bg-sellit text-white w-14 h-14 md:w-16 md:h-16 rounded-[1.75rem] shadow-2xl shadow-sellit/40 flex items-center justify-center hover:scale-110 active:scale-90 transition-all group"
+            className="fixed transition-all duration-500 ease-in-out z-[100] bg-sellit text-white w-14 h-14 md:w-16 md:h-16 rounded-[1.75rem] shadow-2xl shadow-sellit/40 flex items-center justify-center hover:scale-110 active:scale-90 group bottom-24 right-6 md:bottom-10 md:right-10 animate-in slide-in-from-right-8 duration-500"
           >
             <Sparkles size={28} className="group-hover:rotate-12 transition-transform" />
           </button>

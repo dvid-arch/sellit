@@ -10,8 +10,8 @@ router.post('/optimize-listing', protect, async (req: any, res: any) => {
   const { title, condition, category } = req.body;
   
   try {
-    // Initialization must use named parameter
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+    // Fix: Initializing GoogleGenAI using strictly process.env.API_KEY as per the guidelines.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Using gemini-3-flash-preview for text optimization task
     const response = await ai.models.generateContent({
@@ -56,7 +56,8 @@ router.post('/advice', protect, async (req: any, res: any) => {
   const { query, history } = req.body;
   
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+    // Fix: Initializing GoogleGenAI using strictly process.env.API_KEY as per the guidelines.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

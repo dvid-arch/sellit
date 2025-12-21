@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -14,14 +14,13 @@ interface State {
 /**
  * ErrorBoundary component to catch rendering errors and show a fallback UI.
  */
+// Fix: Explicitly extending React.Component and initializing state in the constructor ensures that TypeScript correctly identifies inherited properties like setState and props.
 export class ErrorBoundary extends React.Component<Props, State> {
-  // Fix: Explicitly initializing state as a class property for better TypeScript recognition
-  public state: State = {
-    hasError: false
-  };
-
   constructor(props: Props) {
     super(props);
+    this.state = {
+      hasError: false
+    };
   }
 
   public static getDerivedStateFromError(error: Error): State {
@@ -33,7 +32,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public render() {
-    // Fix: Properly accessing state and methods inherited from React.Component
+    // Accessing state inherited from React.Component
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#F8FAFB] flex items-center justify-center p-6">
@@ -56,7 +55,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 Refresh Application
               </button>
               <button 
-                // Fix: Calling setState on the ErrorBoundary instance correctly
+                // Fix: Properly calling setState which is now correctly recognized as inherited from React.Component.
                 onClick={() => this.setState({ hasError: false })}
                 className="w-full text-xs font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors"
               >
@@ -68,7 +67,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Correctly returning children from props in a React class component
+    // Fix: Properly accessing children through this.props inherited from React.Component.
     return this.props.children;
   }
 }

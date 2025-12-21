@@ -21,6 +21,7 @@ interface ProfileViewProps {
   onBoostListing: (id: string) => void;
   onAddProductClick: () => void;
   onOpenListing: (listing: Listing) => void;
+  onAcceptOffer: (offer: Offer) => void;
 }
 
 const MOCK_TRANSACTIONS: Transaction[] = [
@@ -55,7 +56,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onMarkSold,
   onBoostListing,
   onAddProductClick,
-  onOpenListing
+  onOpenListing,
+  onAcceptOffer
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'listings' | 'offers' | 'history' | 'settings'>('listings');
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -83,7 +85,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   });
 
   const activeListings = listings.filter(l => l.status === 'available' || l.status === 'committed');
-  const receivedOffers = useMemo(() => offers.filter(o => listings.some(l => l.id === o.listingId)), [offers, listings]);
+  const receivedOffers = useMemo(() => offers.filter(o => o.status === 'pending' && listings.some(l => l.id === o.listingId)), [offers, listings]);
 
   const handleSaveBankDetails = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +117,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-28 md:pb-12">
-      {/* Header Profile Card */}
       <div className="relative bg-white rounded-[3rem] shadow-xl shadow-gray-200/50 overflow-hidden border border-gray-100 mb-8">
         <div className="h-32 md:h-48 bg-sellit relative overflow-hidden">
            <div className="absolute inset-0 bg-gradient-to-br from-sellit-dark via-sellit to-sellit opacity-90" />
@@ -154,7 +155,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-8 bg-gray-100/50 p-2 rounded-[1.5rem] w-full md:w-fit overflow-x-auto scrollbar-hide">
         {[
           { id: 'listings', label: 'My Ads', icon: Package },
@@ -182,7 +182,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="animate-in fade-in duration-500">
         {activeSubTab === 'listings' && (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
@@ -277,7 +276,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                       <div className="flex gap-3">
                          <button onClick={() => setSelectedOffer(offer)} className="flex-1 bg-sellit text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-sellit/20 hover:bg-sellit-dark transition-all active:scale-95">Review</button>
-                         <button className="p-3.5 bg-gray-50 text-gray-400 hover:text-sellit rounded-xl transition-all border border-gray-100 hover:bg-white"><MessageSquare size={18} /></button>
                       </div>
                    </div>
                  ))}
@@ -373,7 +371,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
       </div>
 
-      {/* Edit Profile Modal */}
       {showEditProfileModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md animate-fade-in" onClick={() => setShowEditProfileModal(false)} />
@@ -414,7 +411,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       )}
 
-      {/* Boost Checkout Modal */}
       {showBoostCheckout && (
           <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md animate-fade-in" onClick={() => setShowBoostCheckout(null)} />
@@ -480,15 +476,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
       )}
 
-      {/* Offer Review Modal Integration */}
       {selectedOffer && (
         <OfferView 
           offer={selectedOffer} 
           onClose={() => setSelectedOffer(null)} 
           onAccept={(o) => {
-            // In a real app, this would trigger an API call
+            onAcceptOffer(o);
             setSelectedOffer(null);
-            showToast('Deal Started!', 'Check your messages to finalize the swap.', 'success');
           }} 
         />
       )}
