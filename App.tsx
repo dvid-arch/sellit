@@ -7,6 +7,7 @@ import { VerificationForm } from './components/VerificationForm.tsx';
 import { Dashboard } from './components/Dashboard.tsx';
 import { ToastProvider } from './context/ToastContext.tsx';
 import { ConnectivityBanner } from './components/ConnectivityBanner.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
 import { storageService } from './services/storageService.ts';
 
@@ -54,7 +55,11 @@ const App: React.FC = () => {
 
   const content = () => {
     if (step === 'authenticated') {
-      return <Dashboard user={user} onLogout={handleLogout} />;
+      return (
+        <ErrorBoundary>
+          <Dashboard user={user} onLogout={handleLogout} />
+        </ErrorBoundary>
+      );
     }
 
     return (
@@ -68,11 +73,13 @@ const App: React.FC = () => {
             <div className="w-full max-w-md bg-white md:bg-transparent p-8 md:p-0 rounded-[2.5rem] shadow-xl md:shadow-none my-auto">
               {(step === 'signup' || step === 'login' || step === 'forgot_password') && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <AuthForms
-                    type={step === 'forgot_password' ? 'forgot_password' : step as 'signup' | 'login'}
-                    onSwitch={(newType) => setStep(newType as AuthStep)}
-                    onSubmit={step === 'signup' ? handleSignup : handleLogin}
-                  />
+                  <ErrorBoundary>
+                    <AuthForms
+                      type={step === 'forgot_password' ? 'forgot_password' : step as 'signup' | 'login'}
+                      onSwitch={(newType) => setStep(newType as AuthStep)}
+                      onSubmit={step === 'signup' ? handleSignup : handleLogin}
+                    />
+                  </ErrorBoundary>
                 </div>
               )}
               {step === 'verify' && (

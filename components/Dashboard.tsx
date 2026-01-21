@@ -19,7 +19,7 @@ import { AIAssistant } from './AIAssistant.tsx';
 import { useToast } from '../context/ToastContext.tsx';
 import { geminiService } from '../services/gemini.ts';
 import { storageService } from '../services/storageService.ts';
-import { SEED_LISTINGS, SEED_NOTIFICATIONS, SEED_SUPPORT_CHAT, SEED_BROADCASTS } from '../constants/seedData.ts';
+import { SEED_LISTINGS, SEED_NOTIFICATIONS, SEED_SUPPORT_CHAT, SEED_BROADCASTS } from '../data/seedData.ts';
 
 interface DashboardProps {
   user: User | null;
