@@ -2,9 +2,10 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
+
 # SellIt - Campus Marketplace
 
-A fullstack campus marketplace application with escrow functionality, AI-powered features, and real-time messaging.
+A frontend-only campus marketplace application with persisted state, AI-powered features, and real-time messaging simulation.
 
 ## 🏗️ Tech Stack
 
@@ -13,21 +14,14 @@ A fullstack campus marketplace application with escrow functionality, AI-powered
 - Vite (build tool)
 - TailwindCSS (styling)
 - Lucide React (icons)
-
-**Backend:**
-- Node.js + Express
-- MongoDB with Mongoose
-- JWT Authentication
-- Google Gemini AI
+- Google Gemini AI (Client-side)
+- LocalStorage (Data Persistence)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
-- **MongoDB** - Either:
-  - Local installation - [Install MongoDB](https://www.mongodb.com/docs/manual/installation/)
-  - MongoDB Atlas (cloud) - [Create free account](https://www.mongodb.com/cloud/atlas/register)
 - **Gemini API Key** - [Get from Google AI Studio](https://ai.google.dev/)
 
 ### Installation Steps
@@ -38,67 +32,36 @@ A fullstack campus marketplace application with escrow functionality, AI-powered
    cd sellit
    ```
 
-2. **Install root dependencies**
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Install backend dependencies**
-   ```bash
-   cd backend
-   npm install
-   cd ..
-   ```
-
-4. **Configure environment variables**
+3. **Configure environment variables**
    
    Copy the example environment file:
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
    
-   Edit `.env` and fill in your values:
+   Edit `.env.local` and fill in your values:
    ```env
-   GEMINI_API_KEY=your_actual_gemini_api_key
-   JWT_SECRET=your_random_32_character_or_longer_secret
-   MONGODB_URI=mongodb://localhost:27017/sellit
-   PORT=5000
-   NODE_ENV=development
+   VITE_GEMINI_API_KEY=your_actual_gemini_api_key
    ```
-
+   
    **Important:**
    - Get Gemini API key from: https://ai.google.dev/
-   - Generate JWT secret: `openssl rand -base64 32`
-   - For MongoDB Atlas, use connection string format:
-     `mongodb+srv://username:password@cluster.mongodb.net/sellit`
-
-5. **Start MongoDB** (if using local installation)
-   ```bash
-   # On Windows
-   mongod
-   
-   # On macOS/Linux
-   sudo systemctl start mongod
-   ```
 
 ### Running the Application
 
-You'll need **two terminal windows** - one for backend, one for frontend.
-
-**Terminal 1 - Backend Server:**
-```bash
-npm run server
-```
-Expected output: `🚀 Sellit Backend active on port 5000`
-
-**Terminal 2 - Frontend Dev Server:**
+**Start the Frontend Dev Server:**
 ```bash
 npm run dev
 ```
 Expected output: `VITE vX.X.X ready in XXX ms`
 
 **Access the app:**
-Open your browser to `http://localhost:3000`
+Open http://localhost:3000
 
 ## 📁 Project Structure
 

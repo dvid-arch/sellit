@@ -87,6 +87,10 @@ class StorageService {
     return this.getItem<string[]>(this.KEYS.SAVED_LISTINGS) || [];
   }
 
+  saveSavedListings(ids: string[]): void {
+    this.setItem(this.KEYS.SAVED_LISTINGS, ids);
+  }
+
   toggleSavedListing(id: string): void {
     const saved = this.getSavedListings();
     const index = saved.indexOf(id);

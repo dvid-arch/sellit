@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  X, Sparkles, Loader2, Upload, Trash2, 
+import {
+  X, Sparkles, Loader2, Upload, Trash2,
   ChevronLeft, ChevronRight, Edit3, Check,
   MapPin, CheckCircle2
 } from 'lucide-react';
@@ -30,7 +30,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [currentPreviewIdx, setCurrentPreviewIdx] = useState(0);
   const { showToast } = useToast();
-  
+
   const [formData, setFormData] = useState({
     id: initialData?.id || '',
     title: initialData?.title || '',
@@ -42,7 +42,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
     campus: initialData?.campus || 'University of Lagos',
     location: initialData?.location || '',
     isUrgent: initialData?.isUrgent || false,
-    notes: '' 
+    notes: ''
   });
 
   useEffect(() => {
@@ -59,23 +59,35 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles) {
-      const newFiles: UploadedFile[] = Array.from(selectedFiles).map((file: any) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-        type: file.type.includes('pdf') ? 'pdf' : 'image',
-        preview: file.type.includes('image') ? URL.createObjectURL(file) : undefined
-      }));
-      setFiles(prev => [...prev, ...newFiles]);
+      const newFilesPromises = Array.from(selectedFiles).map(async (file: any) => {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+          type: file.type.includes('pdf') ? 'pdf' : 'image',
+          preview: base64
+        };
+      });
+
+      const newFiles = await Promise.all(newFilesPromises);
+      setFiles(prev => [...prev, ...newFiles as UploadedFile[]]);
     }
   };
 
   const removeFile = (id: string) => {
     const fileToRemove = files.find(f => f.id === id);
-    if (fileToRemove?.preview && id !== 'initial') URL.revokeObjectURL(fileToRemove.preview);
+    if (fileToRemove?.preview && fileToRemove.preview.startsWith('blob:') && id !== 'initial') {
+      URL.revokeObjectURL(fileToRemove.preview);
+    }
     setFiles(prev => prev.filter(f => f.id !== id));
   };
 
@@ -103,7 +115,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
 
   const handleNext = () => {
     if (step === 'details') {
-      if (formData.notes) return; 
+      if (formData.notes) return;
       setStep('preview');
     } else {
       if (initialData) {
@@ -117,7 +129,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
   const finalSubmit = () => {
     if (formData.notes) return;
     setIsSubmitting(true);
-    
+
     setTimeout(() => {
       onSubmit({
         ...formData,
@@ -126,8 +138,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
       });
       setIsSubmitting(false);
       showToast(
-        initialData ? 'Update Saved!' : 'Product Published!', 
-        initialData ? 'Your listing has been updated.' : 'Your product is now live on Sellit.', 
+        initialData ? 'Update Saved!' : 'Product Published!',
+        initialData ? 'Your listing has been updated.' : 'Your product is now live on Sellit.',
         'success'
       );
     }, 1000);
@@ -144,7 +156,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
       <div className="flex-1 overflow-y-auto px-12 pb-12 scrollbar-hide">
         <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-10 flex flex-col lg:flex-row gap-12">
           <div className="sr-only opacity-0 h-0 w-0" aria-hidden="true">
-            <input type="text" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
+            <input type="text" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
           </div>
 
           <div className="flex-1 space-y-8 min-h-[500px]">
@@ -194,13 +206,13 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSubmit, ini
           <div className="w-full lg:w-[480px] shrink-0">
             <div className="flex items-center justify-between mb-8 h-10"><h2 className="text-2xl font-bold text-gray-900">Product Info</h2>{isPreview && <button onClick={() => setStep('details')} className="flex items-center gap-2 px-4 py-2 border border-sellit text-sellit rounded-xl font-bold text-sm hover:bg-sellit/5 transition-all"><Edit3 size={16} />Edit Details</button>}</div>
             <div className={`space-y-6 ${isPreview ? 'opacity-70 pointer-events-none' : ''}`}>
-              <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Title</label><input type="text" disabled={isPreview} maxLength={80} placeholder="e.g. iPhone 13 pro max 256 GB" className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-medium text-gray-900" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-              <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Description</label><textarea rows={4} disabled={isPreview} maxLength={500} placeholder="Describe your item details..." className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-medium resize-none text-gray-900" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
+              <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Title</label><input type="text" disabled={isPreview} maxLength={80} placeholder="e.g. iPhone 13 pro max 256 GB" className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-medium text-gray-900" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Description</label><textarea rows={4} disabled={isPreview} maxLength={500} placeholder="Describe your item details..." className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-medium resize-none text-gray-900" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Condition</label><select disabled={isPreview} className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-bold appearance-none text-gray-900" value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}><option>Brand New</option><option>Like New</option><option>Fairly used</option></select></div>
-                <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Category</label><select disabled={isPreview} className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-bold appearance-none text-gray-900" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}><option>Electronics</option><option>Books</option><option>Fashion</option><option>Kitchen</option></select></div>
+                <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Condition</label><select disabled={isPreview} className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-bold appearance-none text-gray-900" value={formData.condition} onChange={e => setFormData({ ...formData, condition: e.target.value })}><option>Brand New</option><option>Like New</option><option>Fairly used</option></select></div>
+                <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Category</label><select disabled={isPreview} className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-bold appearance-none text-gray-900" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}><option>Electronics</option><option>Books</option><option>Fashion</option><option>Kitchen</option></select></div>
               </div>
-              <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Price (₦)</label><div className="relative"><input type="text" disabled={isPreview} placeholder="Enter price in Naira" className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-bold text-gray-900" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value.replace(/[^0-9]/g, '').slice(0, 10)})} />{!isPreview && <button onClick={handleMagicFill} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-sellit hover:bg-sellit/5 rounded-lg transition-all">{loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}</button>}</div></div>
+              <div className="space-y-2"><label className="text-sm font-bold text-gray-700 ml-1">Price (₦)</label><div className="relative"><input type="text" disabled={isPreview} placeholder="Enter price in Naira" className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-sellit/5 transition-all font-bold text-gray-900" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })} />{!isPreview && <button onClick={handleMagicFill} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-sellit hover:bg-sellit/5 rounded-lg transition-all">{loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}</button>}</div></div>
             </div>
           </div>
         </div>

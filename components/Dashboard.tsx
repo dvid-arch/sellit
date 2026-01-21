@@ -7,7 +7,7 @@ import {
   ArrowRight, Bot, ShieldQuestion, Clock, Zap, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { Logo } from '../constants.tsx';
-import { User, Listing, Chat, Offer, ViewRecord, Notification } from '../types.ts';
+import { User, Listing, Chat, Offer, ViewRecord, Notification, Broadcast } from '../types.ts';
 import { ListingForm } from './ListingForm.tsx';
 import { ProductDetail } from './ProductDetail.tsx';
 import { BroadcastForm } from './BroadcastForm.tsx';
@@ -19,7 +19,7 @@ import { AIAssistant } from './AIAssistant.tsx';
 import { useToast } from '../context/ToastContext.tsx';
 import { geminiService } from '../services/gemini.ts';
 import { storageService } from '../services/storageService.ts';
-import { SEED_LISTINGS, SEED_NOTIFICATIONS, SEED_SUPPORT_CHAT } from '../constants/seedData.ts';
+import { SEED_LISTINGS, SEED_NOTIFICATIONS, SEED_SUPPORT_CHAT, SEED_BROADCASTS } from '../constants/seedData.ts';
 
 interface DashboardProps {
   user: User | null;
@@ -46,6 +46,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [notifications, setNotifications] = useState<Notification[]>(() => storageService.getNotifications() || []);
   const [allOffers, setAllOffers] = useState<Offer[]>(() => storageService.getOffers() || []);
   const [savedItems, setSavedItems] = useState<string[]>(() => storageService.getSavedListings() || []);
+  const [broadcasts, setBroadcasts] = useState<Broadcast[]>(() => {
+    const stored = storageService.getBroadcasts();
+    if (!stored || stored.length === 0) return SEED_BROADCASTS;
+    return stored;
+  });
   const [viewHistory, setViewHistory] = useState<ViewRecord[]>([]);
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -159,6 +164,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Persistence Effects - Automatically save data to localStorage when state changes
+  useEffect(() => {
+    storageService.saveListings(listings);
+  }, [listings]);
+
+  useEffect(() => {
+    storageService.saveChats(chats);
+  }, [chats]);
+
+  useEffect(() => {
+    storageService.saveNotifications(notifications);
+  }, [notifications]);
+
+  useEffect(() => {
+    storageService.saveOffers(allOffers);
+  }, [allOffers]);
+
+  useEffect(() => {
+    storageService.saveSavedListings(savedItems);
+  }, [savedItems]);
+
+  useEffect(() => {
+    storageService.saveBroadcasts(broadcasts);
+  }, [broadcasts]);
 
   const scrollToGrid = useCallback(() => {
     if (productGridRef.current) {
@@ -312,6 +342,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setShowSearchSuggestions(false);
   };
 
+  const handleNewBroadcast = (data: any) => {
+    const newBroadcast: Broadcast = {
+      id: `b_${Date.now()}`,
+      author: user?.name || 'Student',
+      authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      need: data.need,
+      details: data.details,
+      budgetMin: parseFloat(data.minPrice) || 0,
+      budgetMax: parseFloat(data.maxPrice) || 0,
+      location: data.radius,
+      time: 'Just now',
+      isBoosted: data.boostEnabled,
+      category: 'General'
+    };
+    setBroadcasts(prev => [newBroadcast, ...prev]);
+    // Do not close immediately, let BroadcastForm handle the delay for success view
+  };
+
   const navItems = [
     { name: 'Home', icon: Home },
     { name: 'Broadcasts', icon: Radio },
@@ -321,12 +369,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   ];
 
   const renderContent = () => {
-    if (showBroadcastForm) return <div className="p-4 md:p-8"><BroadcastForm onBack={() => setShowBroadcastForm(false)} /></div>;
+    if (showBroadcastForm) return <div className="p-4 md:p-8"><BroadcastForm onBack={() => setShowBroadcastForm(false)} onSubmit={handleNewBroadcast} /></div>;
     if (editingListing) return <ListingForm initialData={editingListing} onClose={() => setEditingListing(null)} onSubmit={(l) => { setListings(prev => prev.map(old => old.id === l.id ? l : old)); setEditingListing(null); }} />;
 
     switch (activeTab) {
       case 'Broadcasts':
-        return <div className="p-4 md:p-8"><BroadcastsView onRespond={(b) => startChat(b.author, b.authorAvatar, { title: b.need, price: b.budgetMax, imageUrl: b.authorAvatar })} /></div>;
+        return <div className="p-4 md:p-8"><BroadcastsView broadcasts={broadcasts} onRespond={(b) => startChat(b.author, b.authorAvatar, { title: b.need, price: b.budgetMax, imageUrl: b.authorAvatar })} /></div>;
       case 'Add Product':
         return <ListingForm onClose={() => setActiveTab('Home')} onSubmit={(l) => { setListings([{ ...l, id: Date.now().toString(), status: 'available', seller: user?.name || 'Obokobong', viewCount: 0, offerCount: 0 }, ...listings]); setActiveTab('Home'); }} />;
       case 'Notifications':

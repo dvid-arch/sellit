@@ -12,9 +12,10 @@ interface UploadedFile {
 
 interface BroadcastFormProps {
   onBack: () => void;
+  onSubmit: (data: any) => void;
 }
 
-export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
+export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack, onSubmit }) => {
   const [showBoostModal, setShowBoostModal] = useState(false);
   const [boostEnabled, setBoostEnabled] = useState(false);
   const [radius, setRadius] = useState('Entire Campus');
@@ -22,7 +23,7 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { showToast } = useToast();
-  
+
   const [formData, setFormData] = useState({
     need: '',
     details: '',
@@ -76,6 +77,8 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
+      // Pass data to parent to save
+      onSubmit({ ...formData, radius, boostEnabled });
       showToast('Broadcast Sent!', `Your request is now visible to students in ${radius}.`, 'success');
       setTimeout(() => onBack(), 2000);
     }, 1500);
@@ -97,7 +100,7 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
     <div className="max-w-6xl mx-auto pb-12">
       {/* Header */}
       <div className="mb-8">
-        <button 
+        <button
           onClick={onBack}
           className="p-2 mb-4 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
         >
@@ -110,28 +113,28 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
       {/* Form Card */}
       <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 md:p-12 shadow-sm relative">
         <div className="space-y-10">
-          
+
           {/* Main Question */}
           <div>
             <label className="block text-base font-bold text-gray-800 mb-3">What do you need?</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="e.g. iPhone 13 pro max 256 GB"
               className="w-full px-6 py-4.5 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-sellit/5 transition-all text-gray-900 placeholder:text-gray-400 font-medium"
               value={formData.need}
-              onChange={e => setFormData({...formData, need: e.target.value})}
+              onChange={e => setFormData({ ...formData, need: e.target.value })}
             />
           </div>
 
           {/* Details */}
           <div>
             <label className="block text-base font-bold text-gray-800 mb-3">Add more details</label>
-            <textarea 
+            <textarea
               rows={4}
               placeholder="Describe specific requirements, condition preferences, features needed, etc"
               className="w-full px-6 py-4.5 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-sellit/5 transition-all text-gray-900 placeholder:text-gray-400 font-medium resize-none"
               value={formData.details}
-              onChange={e => setFormData({...formData, details: e.target.value})}
+              onChange={e => setFormData({ ...formData, details: e.target.value })}
             />
           </div>
 
@@ -140,24 +143,24 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
             <div>
               <label className="block text-base font-bold text-gray-800 mb-3">Min Price</label>
               <div className="relative">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Enter min budget"
                   className="w-full px-6 py-4.5 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-sellit/5 transition-all text-gray-900 placeholder:text-gray-400 font-medium"
                   value={formData.minPrice}
-                  onChange={e => setFormData({...formData, minPrice: e.target.value})}
+                  onChange={e => setFormData({ ...formData, minPrice: e.target.value })}
                 />
               </div>
             </div>
             <div>
               <label className="block text-base font-bold text-gray-800 mb-3">Max Price</label>
               <div className="relative">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Enter max budget"
                   className="w-full px-6 py-4.5 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-sellit/5 transition-all text-gray-900 placeholder:text-gray-400 font-medium"
                   value={formData.maxPrice}
-                  onChange={e => setFormData({...formData, maxPrice: e.target.value})}
+                  onChange={e => setFormData({ ...formData, maxPrice: e.target.value })}
                 />
               </div>
             </div>
@@ -169,7 +172,7 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
               <label className="block text-base font-bold text-gray-800">Choose your Broadcast Radius</label>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-gray-500">Boost Broadcast</span>
-                <button 
+                <button
                   onClick={handleToggleBoost}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${boostEnabled ? 'bg-sellit' : 'bg-gray-200'}`}
                 >
@@ -177,21 +180,19 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
                 </button>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {['My Hostel', 'My Faculty', 'Entire Campus'].map((item) => (
                 <button
                   key={item}
                   onClick={() => setRadius(item)}
-                  className={`flex items-center gap-4 px-6 py-5 rounded-2xl border transition-all ${
-                    radius === item 
-                    ? 'border-sellit bg-sellit/5 ring-1 ring-sellit' 
-                    : 'border-gray-100 bg-gray-50/30 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-4 px-6 py-5 rounded-2xl border transition-all ${radius === item
+                      ? 'border-sellit bg-sellit/5 ring-1 ring-sellit'
+                      : 'border-gray-100 bg-gray-50/30 hover:bg-gray-50'
+                    }`}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                    radius === item ? 'border-sellit bg-sellit' : 'border-gray-300'
-                  }`}>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${radius === item ? 'border-sellit bg-sellit' : 'border-gray-300'
+                    }`}>
                     {radius === item && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
                   <span className={`font-bold ${radius === item ? 'text-sellit' : 'text-gray-600'}`}>{item}</span>
@@ -203,15 +204,15 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
           {/* Reference Image Upload */}
           <div>
             <label className="block text-base font-bold text-gray-800 mb-3">Reference Image</label>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileSelect} 
-              multiple 
-              accept="image/png, image/jpeg" 
-              className="hidden" 
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept="image/png, image/jpeg"
+              className="hidden"
             />
-            <div 
+            <div
               onClick={triggerFileInput}
               className="relative border-2 border-dashed border-[#00687F]/30 rounded-[2rem] p-12 text-center bg-[#F9FBFC] hover:bg-white hover:border-sellit transition-all group cursor-pointer"
             >
@@ -244,7 +245,7 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
                         <p className="text-xs text-gray-400 font-medium">{file.size}</p>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => removeFile(file.id)}
                       className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                     >
@@ -260,13 +261,12 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
 
       {/* Footer Button */}
       <div className="mt-10 flex justify-end">
-        <button 
+        <button
           onClick={handleBroadcast}
-          className={`px-12 py-4 rounded-2xl font-extrabold text-lg shadow-xl transition-all active:scale-95 flex items-center gap-3 ${
-            formData.need 
-            ? 'bg-sellit text-white shadow-sellit/20 hover:bg-sellit-dark' 
-            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
+          className={`px-12 py-4 rounded-2xl font-extrabold text-lg shadow-xl transition-all active:scale-95 flex items-center gap-3 ${formData.need
+              ? 'bg-sellit text-white shadow-sellit/20 hover:bg-sellit-dark'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
           disabled={!formData.need || isSubmitting}
         >
           {isSubmitting ? (
@@ -283,12 +283,12 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
       {/* Boost Modal Overlay */}
       {showBoostModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-300" 
+          <div
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-300"
             onClick={() => setShowBoostModal(false)}
           />
           <div className="relative w-full max-w-[500px] bg-white rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in-95 duration-300">
-            <button 
+            <button
               onClick={() => setShowBoostModal(false)}
               className="absolute top-8 right-8 p-2 text-gray-400 hover:text-gray-900 transition-colors"
             >
@@ -322,7 +322,7 @@ export const BroadcastForm: React.FC<BroadcastFormProps> = ({ onBack }) => {
                 ))}
               </div>
 
-              <button 
+              <button
                 onClick={confirmBoost}
                 className="w-full bg-sellit text-white py-4.5 rounded-[1.5rem] font-extrabold text-lg shadow-xl shadow-sellit/20 hover:bg-sellit-dark transition-all active:scale-[0.98]"
               >

@@ -8,14 +8,16 @@ import { Dashboard } from './components/Dashboard.tsx';
 import { ToastProvider } from './context/ToastContext.tsx';
 import { ConnectivityBanner } from './components/ConnectivityBanner.tsx';
 
+import { storageService } from './services/storageService.ts';
+
 const App: React.FC = () => {
   const [step, setStep] = useState<AuthStep>('signup');
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('sellit_user');
+    const saved = storageService.getUser();
     if (saved) {
-      setUser(JSON.parse(saved));
+      setUser(saved);
       setStep('authenticated');
     }
   }, []);
@@ -25,24 +27,29 @@ const App: React.FC = () => {
     setStep('verify');
   };
 
-  const handleLogin = () => {
-    const mockUser: User = { name: 'Obokobong', email: 'ubokobong@gmail.com', phone: '555-0123' };
+  const handleLogin = (userData?: any) => {
+    // Simulating login - in a real app we'd verify credentials
+    const mockUser: User = {
+      name: userData?.name || 'Obokobong',
+      email: userData?.email || 'ubokobong@gmail.com',
+      phone: '555-0123'
+    };
     setUser(mockUser);
     setStep('authenticated');
-    localStorage.setItem('sellit_user', JSON.stringify(mockUser));
+    storageService.saveUser(mockUser);
   };
 
   const handleVerificationSuccess = () => {
     setStep('authenticated');
     if (user) {
-      localStorage.setItem('sellit_user', JSON.stringify(user));
+      storageService.saveUser(user);
     }
   };
 
   const handleLogout = () => {
     setUser(null);
     setStep('login');
-    localStorage.removeItem('sellit_user');
+    storageService.logout();
   };
 
   const content = () => {
@@ -61,18 +68,18 @@ const App: React.FC = () => {
             <div className="w-full max-w-md bg-white md:bg-transparent p-8 md:p-0 rounded-[2.5rem] shadow-xl md:shadow-none my-auto">
               {(step === 'signup' || step === 'login' || step === 'forgot_password') && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <AuthForms 
-                    type={step === 'forgot_password' ? 'forgot_password' : step as 'signup' | 'login'} 
-                    onSwitch={(newType) => setStep(newType as AuthStep)} 
-                    onSubmit={step === 'signup' ? handleSignup : handleLogin} 
+                  <AuthForms
+                    type={step === 'forgot_password' ? 'forgot_password' : step as 'signup' | 'login'}
+                    onSwitch={(newType) => setStep(newType as AuthStep)}
+                    onSubmit={step === 'signup' ? handleSignup : handleLogin}
                   />
                 </div>
               )}
               {step === 'verify' && (
                 <div className="animate-in slide-in-from-right duration-500">
-                  <VerificationForm 
-                    email={user?.email || ''} 
-                    onSuccess={handleVerificationSuccess} 
+                  <VerificationForm
+                    email={user?.email || ''}
+                    onSuccess={handleVerificationSuccess}
                   />
                 </div>
               )}

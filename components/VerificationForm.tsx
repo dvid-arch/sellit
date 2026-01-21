@@ -43,17 +43,17 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({ email, onSuc
       <div className="mb-12 self-start">
         <Logo />
       </div>
-      
+
       <h2 className="text-4xl font-bold text-gray-900 mb-2">Check your inbox</h2>
       <p className="text-gray-500 mb-10">
-        Enter the 4-digit code sent to <br/><span className="font-bold text-gray-800">{email || 'your-email@edu.com'}</span>
+        Enter the 4-digit code sent to <br /><span className="font-bold text-gray-800">{email || 'your-email@edu.com'}</span>
       </p>
 
       <div className="flex gap-4 mb-10 w-full justify-center">
         {otp.map((digit, idx) => (
           <input
             key={idx}
-            ref={el => inputs.current[idx] = el}
+            ref={(el) => { inputs.current[idx] = el; }}
             type="text"
             className="w-16 h-20 bg-white border border-gray-300 rounded-2xl text-center text-3xl font-bold focus:ring-4 focus:ring-sellit/10 transition-all text-sellit"
             value={digit}
