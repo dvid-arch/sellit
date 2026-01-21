@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Logo } from '../constants';
+import { Logo } from '../appConstants';
 
 interface VerificationFormProps {
   email: string;

@@ -6,7 +6,7 @@ import {
   ArrowUpDown, Radio, UserCircle, Settings, Heart, TrendingUp, Sparkles, Tag,
   ArrowRight, Bot, ShieldQuestion, Clock, Zap, RefreshCw, AlertCircle
 } from 'lucide-react';
-import { Logo } from '../constants.tsx';
+import { Logo } from '../appConstants.tsx';
 import { User, Listing, Chat, Offer, ViewRecord, Notification, Broadcast } from '../types.ts';
 import { ListingForm } from './ListingForm.tsx';
 import { ProductDetail } from './ProductDetail.tsx';

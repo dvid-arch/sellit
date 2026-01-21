@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { SLIDES, Logo } from '../constants';
+import { SLIDES, Logo } from '../appConstants';
 import { MapPin } from 'lucide-react';
 
 export const Carousel: React.FC = () => {
@@ -30,14 +30,13 @@ export const Carousel: React.FC = () => {
       {SLIDES.map((slide, idx) => (
         <div
           key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-1500 ease-in-out ${
-            idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
+          className={`absolute inset-0 transition-opacity duration-1500 ease-in-out ${idx === current ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
         >
           {/* Background Image with Dark Overlay */}
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-center transition-transform duration-[12s] ease-linear"
-            style={{ 
+            style={{
               backgroundImage: `url(${slide.imageUrl})`,
               transform: idx === current ? 'scale(1.1)' : 'scale(1)'
             }}
@@ -53,11 +52,11 @@ export const Carousel: React.FC = () => {
                   <MapPin size={28} className="text-white" />
                 </div>
               )}
-              
+
               <h1 className="text-5xl font-extrabold mb-6 leading-[1.1] tracking-tight text-white drop-shadow-sm">
                 {slide.title}
               </h1>
-              
+
               <p className="text-xl text-white/90 leading-relaxed font-medium drop-shadow-md">
                 {slide.description}
               </p>
@@ -68,11 +67,10 @@ export const Carousel: React.FC = () => {
                   <button
                     key={dotIdx}
                     onClick={() => setCurrent(dotIdx)}
-                    className={`transition-all duration-500 rounded-full border border-white/10 ${
-                      dotIdx === current 
-                        ? 'w-10 h-1.5 bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)]' 
+                    className={`transition-all duration-500 rounded-full border border-white/10 ${dotIdx === current
+                        ? 'w-10 h-1.5 bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)]'
                         : 'w-2.5 h-1.5 bg-white/20 hover:bg-white/50'
-                    }`}
+                      }`}
                     aria-label={`Go to slide ${dotIdx + 1}`}
                   />
                 ))}
