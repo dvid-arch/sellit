@@ -18,9 +18,13 @@ export class GeminiService {
 
   async generateDescription(itemName: string, condition: string): Promise<string> {
     return this.executeWithRetry(async () => {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         contents: `Generate a catchy, student-friendly 2-sentence description for a "${condition}" condition "${itemName}" to be sold on a college campus marketplace. Mention why it's a good deal for a student.`,
         config: { temperature: 0.7 },
       });
@@ -31,10 +35,14 @@ export class GeminiService {
 
   async suggestPrice(itemName: string, condition: string): Promise<number> {
     return this.executeWithRetry(async () => {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Suggest a fair second-hand price (in USD) for a "${condition}" condition "${itemName}" on a college campus. Return only the number.`,
+        model: 'gemini-2.0-flash-exp',
+        contents: `Suggest a fair second-hand price (in Nigerian Naira) for a "${condition}" condition "${itemName}" on a college campus. Return only the number.`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {
@@ -54,21 +62,25 @@ export class GeminiService {
 
   async getSmartAdvice(query: string, history: { role: string; content: string }[]): Promise<{ text: string; sources?: any[] }> {
     return this.executeWithRetry(async () => {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         // Mapping roles to 'user' and 'model' and using the correct Content[] structure
         contents: [
-          ...history.map(h => ({ 
-            role: h.role === 'user' ? 'user' : 'model', 
-            parts: [{ text: h.content }] 
+          ...history.map(h => ({
+            role: h.role === 'user' ? 'user' : 'model',
+            parts: [{ text: h.content }]
           })),
           { role: 'user', parts: [{ text: query }] }
         ],
-        config: { 
+        config: {
           // Instruction moved to systemInstruction for better control
           systemInstruction: "You are the Sellit Assistant, a helpful AI for a college campus marketplace. Help students find items, price their items, or give general campus shopping advice. Be concise and friendly.",
-          tools: [{ googleSearch: {} }] 
+          tools: [{ googleSearch: {} }]
         },
       });
 
@@ -84,9 +96,13 @@ export class GeminiService {
 
   async interpretSearch(query: string): Promise<{ category?: string; minPrice?: number; maxPrice?: number; intent: string }> {
     return this.executeWithRetry(async () => {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         contents: `Analyze the user's search query for a campus marketplace: "${query}". Identify the primary category (Electronics, Books, Fashion, Kitchen, Home and furniture), and optional price range.`,
         config: {
           responseMimeType: 'application/json',

@@ -2,19 +2,204 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# SellIt - Campus Marketplace
 
-This contains everything you need to run your app locally.
+A fullstack campus marketplace application with escrow functionality, AI-powered features, and real-time messaging.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1VC1nODe5nk-TEwJURsuwRNpcKK0HSKL4
+## 🏗️ Tech Stack
 
-## Run Locally
+**Frontend:**
+- React 19 with TypeScript
+- Vite (build tool)
+- TailwindCSS (styling)
+- Lucide React (icons)
 
-**Prerequisites:**  Node.js
+**Backend:**
+- Node.js + Express
+- MongoDB with Mongoose
+- JWT Authentication
+- Google Gemini AI
 
+## 🚀 Quick Start
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Prerequisites
+
+- **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
+- **MongoDB** - Either:
+  - Local installation - [Install MongoDB](https://www.mongodb.com/docs/manual/installation/)
+  - MongoDB Atlas (cloud) - [Create free account](https://www.mongodb.com/cloud/atlas/register)
+- **Gemini API Key** - [Get from Google AI Studio](https://ai.google.dev/)
+
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd sellit
+   ```
+
+2. **Install root dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Install backend dependencies**
+   ```bash
+   cd backend
+   npm install
+   cd ..
+   ```
+
+4. **Configure environment variables**
+   
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and fill in your values:
+   ```env
+   GEMINI_API_KEY=your_actual_gemini_api_key
+   JWT_SECRET=your_random_32_character_or_longer_secret
+   MONGODB_URI=mongodb://localhost:27017/sellit
+   PORT=5000
+   NODE_ENV=development
+   ```
+
+   **Important:**
+   - Get Gemini API key from: https://ai.google.dev/
+   - Generate JWT secret: `openssl rand -base64 32`
+   - For MongoDB Atlas, use connection string format:
+     `mongodb+srv://username:password@cluster.mongodb.net/sellit`
+
+5. **Start MongoDB** (if using local installation)
+   ```bash
+   # On Windows
+   mongod
+   
+   # On macOS/Linux
+   sudo systemctl start mongod
+   ```
+
+### Running the Application
+
+You'll need **two terminal windows** - one for backend, one for frontend.
+
+**Terminal 1 - Backend Server:**
+```bash
+npm run server
+```
+Expected output: `🚀 Sellit Backend active on port 5000`
+
+**Terminal 2 - Frontend Dev Server:**
+```bash
+npm run dev
+```
+Expected output: `VITE vX.X.X ready in XXX ms`
+
+**Access the app:**
+Open your browser to `http://localhost:3000`
+
+## 📁 Project Structure
+
+```
+sellit/
+├── backend/              # Express backend
+│   ├── models/          # Mongoose schemas
+│   ├── routes/          # API endpoints
+│   ├── middleware/      # Auth & validation
+│   └── server.ts        # Entry point
+├── components/          # React components
+├── services/            # Frontend services
+├── context/             # React context providers
+├── types.ts             # TypeScript definitions
+├── App.tsx              # Main React component
+└── index.html           # Entry HTML file
+```
+
+## 🔧 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start frontend development server (port 3000) |
+| `npm run server` | Start backend server (port 5000) |
+| `npm run build` | Build frontend for production |
+| `npm run preview` | Preview production build locally |
+
+## ⚠️ Known Issues & Fixes
+
+### Issue: Frontend auth doesn't connect to backend
+**Status:** 🚧 In Progress  
+**Workaround:** Currently using mock authentication. Backend routes exist but aren't connected yet.
+
+### Issue: Gemini service exposed in frontend
+**Status:** 🚧 Needs Fix  
+**Security Note:** API keys should never be in frontend code. Move to backend endpoints.
+
+### Issue: Mock data in Dashboard
+**Status:** 🚧 In Progress  
+**Note:** Dashboard uses hardcoded data. Backend routes exist but not yet integrated.
+
+## 🔐 Security Notes
+
+- Never commit `.env` file (already in `.gitignore`)
+- Never share your `GEMINI_API_KEY` or `JWT_SECRET`
+- In production, use strong JWT secrets (32+ characters)
+- Configure CORS properly for production deployments
+
+## 🌐 API Endpoints
+
+Backend runs on `http://localhost:5000`
+
+### Authentication
+- `POST /api/auth/register` - Create new user
+- `POST /api/auth/login` - Login user
+
+### Listings
+- `GET /api/listings` - Get all listings
+- `POST /api/listings` - Create listing
+- `PUT /api/listings/:id` - Update listing
+- `DELETE /api/listings/:id` - Delete listing
+
+### Additional Routes
+- `/api/escrow` - Escrow transactions
+- `/api/ai` - AI-powered features
+- `/api/broadcasts` - User broadcasts
+- `/api/chats` - Messaging
+- `/api/notifications` - Notification management
+
+## 🧪 Testing
+
+Currently no automated tests. Manual testing workflow:
+1. Start both servers
+2. Open `http://localhost:3000`
+3. Test signup/login flows
+4. Navigate dashboard features
+
+## 📝 Environment Variables Reference
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `GEMINI_API_KEY` | ✅ Yes | Google Gemini API key | `AIzaSy...` |
+| `JWT_SECRET` | ✅ Yes | Secret for JWT signing | `random_32_char_string` |
+| `MONGODB_URI` | ✅ Yes | MongoDB connection string | `mongodb://localhost:27017/sellit` |
+| `PORT` | ❌ No | Backend server port | `5000` (default) |
+| `NODE_ENV` | ❌ No | Environment mode | `development` |
+
+## 🤝 Contributing
+
+This is a work-in-progress campus marketplace project. Current priorities:
+1. Connect frontend authentication to backend APIs
+2. Move Gemini service to backend-only
+3. Replace mock data with real database queries
+4. Add input validation and error handling
+
+## 📄 License
+
+[Add your license here]
+
+## 🔗 Links
+
+- **AI Studio Project**: https://ai.studio/apps/drive/1VC1nODe5nk-TEwJURsuwRNpcKK0HSKL4
+- **Google Gemini API**: https://ai.google.dev/
+- **MongoDB Atlas**: https://www.mongodb.com/cloud/atlas

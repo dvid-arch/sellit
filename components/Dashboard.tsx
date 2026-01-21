@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { 
-  Plus, Search, MapPin, Bell, MessageSquare, Home, 
+import {
+  Plus, Search, MapPin, Bell, MessageSquare, Home,
   ChevronDown, Filter, PackageX, LogOut, PanelLeftClose, PanelLeftOpen,
   ArrowUpDown, Radio, UserCircle, Settings, Heart, TrendingUp, Sparkles, Tag,
   ArrowRight, Bot, ShieldQuestion, Clock, Zap, RefreshCw, AlertCircle
@@ -18,6 +18,8 @@ import { ProfileView } from './ProfileView.tsx';
 import { AIAssistant } from './AIAssistant.tsx';
 import { useToast } from '../context/ToastContext.tsx';
 import { geminiService } from '../services/gemini.ts';
+import { storageService } from '../services/storageService.ts';
+import { SEED_LISTINGS, SEED_NOTIFICATIONS, SEED_SUPPORT_CHAT } from '../constants/seedData.ts';
 
 interface DashboardProps {
   user: User | null;
@@ -26,130 +28,36 @@ interface DashboardProps {
 
 const SUPPORT_CHAT_ID = 'chat_support';
 
-const INITIAL_CHATS: Chat[] = [
-  {
-    id: SUPPORT_CHAT_ID,
-    contactName: 'Sellit Human Desk',
-    contactAvatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150',
-    lastSeen: 'Official Support',
-    lastMessage: 'How can we help you today?',
-    lastMessageTime: 'Today',
-    isSupport: true,
-    supportMeta: {
-      isOnline: true,
-      estimatedWaitMinutes: 3,
-      activeAgentsCount: 4,
-      queuePosition: 0
-    },
-    messages: [
-      { id: 's1', text: 'Hello! This is the human support desk. If you have issues with payments, escrow, or safety, we are here to help.', timestamp: '09:00', senderId: 'them', agentName: 'Official Bot' }
-    ]
-  }
-];
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'match',
-    title: 'New Match for your Broadcast!',
-    message: 'Someone just listed a "2-Burner Gas Stove" that matches your request in Moremi Hall.',
-    time: '2 mins ago',
-    isRead: false,
-    relatedImage: 'https://images.unsplash.com/photo-1521203050033-780598859941?w=150',
-    actionLabel: 'View Match',
-    actionPayload: { type: 'view_listing', id: '1' }
-  },
-  {
-    id: '2',
-    type: 'price_drop',
-    title: 'Price Drop Alert!',
-    message: 'The "Mini Refrigerator" you viewed is now N65,000 (was N75,000).',
-    time: '1 hour ago',
-    isRead: false,
-    relatedImage: 'https://images.unsplash.com/photo-1571175452281-04a282879717?w=150',
-    actionLabel: 'Check Deal',
-    actionPayload: { type: 'view_listing', id: '1' }
-  },
-  {
-    id: '3',
-    type: 'offer',
-    title: 'New Offer Received',
-    message: 'A student made an offer of N250,000 for your "HP Laptop".',
-    time: '3 hours ago',
-    isRead: true,
-    relatedImage: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=150',
-    actionLabel: 'Review Offer',
-    actionPayload: { type: 'view_offer', id: 'offer_1' }
-  }
-];
-
-const MOCK_OFFERS: Offer[] = [
-  {
-    id: 'offer_1',
-    listingId: '2',
-    listingTitle: 'HP Laptop',
-    listingImage: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=800&auto=format&fit=crop',
-    originalPrice: 275000,
-    offeredPrice: 250000,
-    buyerName: 'David Uzo',
-    buyerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-    message: 'I really need this for my engineering projects. Can we do 250k? I can meet today.',
-    status: 'pending',
-    timestamp: '3 hours ago'
-  }
-];
-
-const MOCK_LISTINGS: Listing[] = [
-  {
-    id: '1',
-    title: 'Mini Refrigerator',
-    price: 65000,
-    category: 'Electronics',
-    isUrgent: true,
-    isNegotiable: true,
-    description: 'Small refrigerator, perfect for keeping drinks and snacks cold in your hostel room. High energy efficiency.',
-    imageUrl: 'https://images.unsplash.com/photo-1571175452281-04a282879717?q=80&w=800&auto=format&fit=crop',
-    seller: 'Jane Darwin',
-    location: 'NDDC Hostel',
-    status: 'available',
-    viewCount: 245,
-    offerCount: 3
-  },
-  {
-    id: '2',
-    title: 'HP Laptop',
-    price: 275000,
-    category: 'Electronics',
-    isNegotiable: true,
-    description: 'Fairly used HP laptop, 256GB Ram, Core i5. Perfect for project research. Battery life is solid.',
-    imageUrl: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=800&auto=format&fit=crop',
-    seller: 'Obokobong',
-    location: 'NDDC Hostel',
-    status: 'available',
-    viewCount: 120,
-    offerCount: 1
-  }
-];
-
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('Home');
-  const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
-  const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [allOffers, setAllOffers] = useState<Offer[]>(MOCK_OFFERS);
-  const [savedItems, setSavedItems] = useState<string[]>([]);
+
+  // Initialize data from localStorage or use seed data for first-time users
+  const [listings, setListings] = useState<Listing[]>(() => {
+    if (storageService.isFirstTimeUser()) {
+      storageService.saveListings(SEED_LISTINGS);
+      storageService.saveNotifications(SEED_NOTIFICATIONS);
+      storageService.saveChats([SEED_SUPPORT_CHAT]);
+      return SEED_LISTINGS;
+    }
+    return storageService.getListings();
+  });
+
+  const [chats, setChats] = useState<Chat[]>(() => storageService.getChats() || [SEED_SUPPORT_CHAT]);
+  const [notifications, setNotifications] = useState<Notification[]>(() => storageService.getNotifications() || []);
+  const [allOffers, setAllOffers] = useState<Offer[]>(() => storageService.getOffers() || []);
+  const [savedItems, setSavedItems] = useState<string[]>(() => storageService.getSavedListings() || []);
   const [viewHistory, setViewHistory] = useState<ViewRecord[]>([]);
-  
+
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [showBroadcastForm, setShowBroadcastForm] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [sortBy, setSortBy] = useState('Newest');
-  
+
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -181,12 +89,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(l => 
+      result = result.filter(l =>
         l.title.toLowerCase().includes(query) ||
         l.description.toLowerCase().includes(query)
       );
     }
-    
+
     const sorted = [...result];
     if (sortBy === 'Price: Low to High') {
       sorted.sort((a, b) => a.price - b.price);
@@ -207,13 +115,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const searchSuggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const suggestions: { label: string; type: 'category' | 'listing' | 'ai' | 'trending'; extra?: string }[] = [];
-    
-    const categoryMatches = categories.filter(c => 
+
+    const categoryMatches = categories.filter(c =>
       c !== 'All Categories' && c.toLowerCase().includes(searchQuery.toLowerCase())
     );
     categoryMatches.forEach(c => suggestions.push({ label: c, type: 'category' }));
 
-    const listingMatches = listings.filter(l => 
+    const listingMatches = listings.filter(l =>
       l.title.toLowerCase().includes(searchQuery.toLowerCase())
     ).slice(0, 3);
     listingMatches.forEach(l => suggestions.push({ label: l.title, type: 'listing', extra: `₦${l.price.toLocaleString()}` }));
@@ -221,7 +129,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     if (searchQuery.length > 2) {
       suggestions.push({ label: `Ask AI: "${searchQuery}"`, type: 'ai' });
     }
-    
+
     return suggestions;
   }, [searchQuery, listings, categories]);
 
@@ -229,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setIsLoading(true);
     setLoadError(false);
     setTimeout(() => {
-        setIsLoading(false);
+      setIsLoading(false);
     }, 800);
   }, []);
 
@@ -257,7 +165,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       const offset = 80;
       const elementPosition = productGridRef.current.getBoundingClientRect().top;
       const offsetPosition = elementPosition + (scrollContainerRef.current?.scrollTop || 0) - offset;
-      
+
       scrollContainerRef.current?.scrollTo({
         top: offsetPosition,
         behavior: 'smooth'
@@ -310,11 +218,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     // Immediate state update for smooth UX
     setAllOffers(prev => prev.map(o => o.id === offer.id ? { ...o, status: 'accepted' } : o));
     setListings(prev => prev.map(l => l.id === offer.listingId ? { ...l, status: 'committed' } : l));
-    
+
     // Auto-create chat specifically for this negotiation to close the deal
     const chatId = `chat_negotiation_${offer.id}`;
     const buyerFirstName = offer.buyerName.split(' ')[0];
-    
+
     const newChat: Chat = {
       id: chatId,
       contactName: offer.buyerName,
@@ -328,17 +236,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         imageUrl: offer.listingImage
       },
       messages: [
-        { 
-          id: `sys_${Date.now()}`, 
-          text: `You accepted ${buyerFirstName}'s offer! Chat now to arrange a meetup location.`, 
-          timestamp: 'now', 
-          senderId: 'them' 
+        {
+          id: `sys_${Date.now()}`,
+          text: `You accepted ${buyerFirstName}'s offer! Chat now to arrange a meetup location.`,
+          timestamp: 'now',
+          senderId: 'them'
         },
-        { 
-          id: `m_${Date.now()}`, 
-          text: `Hi ${buyerFirstName}, I've accepted your offer. When can you meet at the student union for inspection?`, 
-          timestamp: 'now', 
-          senderId: 'me' 
+        {
+          id: `m_${Date.now()}`,
+          text: `Hi ${buyerFirstName}, I've accepted your offer. When can you meet at the student union for inspection?`,
+          timestamp: 'now',
+          senderId: 'me'
         }
       ]
     };
@@ -415,7 +323,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const renderContent = () => {
     if (showBroadcastForm) return <div className="p-4 md:p-8"><BroadcastForm onBack={() => setShowBroadcastForm(false)} /></div>;
     if (editingListing) return <ListingForm initialData={editingListing} onClose={() => setEditingListing(null)} onSubmit={(l) => { setListings(prev => prev.map(old => old.id === l.id ? l : old)); setEditingListing(null); }} />;
-    
+
     switch (activeTab) {
       case 'Broadcasts':
         return <div className="p-4 md:p-8"><BroadcastsView onRespond={(b) => startChat(b.author, b.authorAvatar, { title: b.need, price: b.budgetMax, imageUrl: b.authorAvatar })} /></div>;
@@ -423,9 +331,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return <ListingForm onClose={() => setActiveTab('Home')} onSubmit={(l) => { setListings([{ ...l, id: Date.now().toString(), status: 'available', seller: user?.name || 'Obokobong', viewCount: 0, offerCount: 0 }, ...listings]); setActiveTab('Home'); }} />;
       case 'Notifications':
         return (
-          <NotificationsView 
-            notifications={notifications} 
-            onAction={handleNotificationAction} 
+          <NotificationsView
+            notifications={notifications}
+            onAction={handleNotificationAction}
             onMarkAllRead={handleMarkAllRead}
             onDelete={handleDeleteNotification}
             onMarkRead={handleMarkRead}
@@ -437,9 +345,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           setChats(prev => prev.map(c => c.id === chatId ? { ...c, messages: [...c.messages, { id: Date.now().toString(), text, timestamp: 'now', senderId: 'me' }], lastMessage: text } : c));
         }} />;
       case 'Profile':
-        return <ProfileView 
-          user={user} 
-          listings={listings.filter(l => l.seller === (user?.name || 'Obokobong'))} 
+        return <ProfileView
+          user={user}
+          listings={listings.filter(l => l.seller === (user?.name || 'Obokobong'))}
           offers={allOffers}
           onEditListing={(l) => { setEditingListing(l); }}
           onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
@@ -455,7 +363,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <div className="relative w-full h-44 md:h-80 rounded-[2rem] md:rounded-[3rem] overflow-hidden mb-8 md:mb-12 bg-sellit text-white shadow-2xl shadow-sellit/20 flex flex-col justify-center px-6 md:px-16 group">
               <div className="absolute inset-0 bg-gradient-to-r from-sellit-dark via-sellit to-transparent opacity-90 z-10" />
               <div className="relative z-20 max-w-xl">
-                <h1 className="text-2xl md:text-5xl font-black mb-3 md:mb-5 leading-tight tracking-tight text-white drop-shadow-sm">Need something?<br/>Broadcast to Campus.</h1>
+                <h1 className="text-2xl md:text-5xl font-black mb-3 md:mb-5 leading-tight tracking-tight text-white drop-shadow-sm">Need something?<br />Broadcast to Campus.</h1>
                 <p className="text-white/80 text-xs md:text-lg mb-4 md:mb-8 font-medium leading-relaxed hidden sm:block drop-shadow-sm">Post your request and let fellow students find you. Simple, fast, and local.</p>
                 <div className="flex gap-3">
                   <button onClick={() => setShowBroadcastForm(true)} className="bg-white text-sellit px-5 py-2.5 md:px-8 md:py-3.5 rounded-xl md:rounded-2xl font-black text-xs md:text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">Start Broadcast</button>
@@ -491,9 +399,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 md:gap-4 overflow-x-auto scrollbar-hide">
                   <div className="relative shrink-0">
-                    <select 
-                      value={selectedCategory} 
-                      onChange={(e) => setSelectedCategory(e.target.value)} 
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
                       className="appearance-none pl-10 pr-10 py-2.5 bg-white border border-gray-100 rounded-xl text-xs md:text-sm font-black text-gray-700 hover:border-sellit transition-all shadow-sm outline-none cursor-pointer"
                     >
                       {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -503,9 +411,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   </div>
 
                   <div className="relative shrink-0">
-                    <select 
-                      value={sortBy} 
-                      onChange={(e) => setSortBy(e.target.value)} 
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
                       className="appearance-none pl-10 pr-10 py-2.5 bg-white border border-gray-100 rounded-xl text-xs md:text-sm font-black text-gray-700 hover:border-sellit transition-all shadow-sm outline-none cursor-pointer"
                     >
                       {sortOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -516,18 +424,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 </div>
 
                 <div className="flex items-center justify-between md:justify-end gap-4">
-                   <span className="text-[10px] md:text-xs font-black text-gray-400 uppercase tracking-widest">{filteredListings.length} items found</span>
-                   <div className="flex items-center gap-2 text-[10px] md:text-xs font-black text-sellit bg-sellit/5 px-3 py-1.5 rounded-lg border border-sellit/10">
-                     <MapPin size={12} />
-                     <span>NDDC Hostel</span>
-                   </div>
+                  <span className="text-[10px] md:text-xs font-black text-gray-400 uppercase tracking-widest">{filteredListings.length} items found</span>
+                  <div className="flex items-center gap-2 text-[10px] md:text-xs font-black text-sellit bg-sellit/5 px-3 py-1.5 rounded-lg border border-sellit/10">
+                    <MapPin size={12} />
+                    <span>NDDC Hostel</span>
+                  </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8 pb-20 md:pb-12">
               {isLoading ? (
-                Array.from({length: 8}).map((_, i) => (
+                Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] h-64 md:h-96 animate-pulse border border-gray-100 p-4">
                     <div className="bg-gray-50 h-2/3 rounded-2xl mb-4" />
                     <div className="h-4 bg-gray-50 rounded w-3/4 mb-2" />
@@ -551,9 +459,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   const isOwner = item.seller === (user?.name || 'Obokobong');
 
                   return (
-                    <div 
-                      key={item.id} 
-                      onClick={() => handleOpenProduct(item)} 
+                    <div
+                      key={item.id}
+                      onClick={() => handleOpenProduct(item)}
                       className={`group bg-white rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-gray-100 hover:shadow-2xl hover:shadow-sellit/5 transition-all duration-500 cursor-pointer relative ${item.status !== 'available' ? 'opacity-70' : ''}`}
                     >
                       <div className="relative aspect-square md:aspect-[4/5] overflow-hidden bg-gray-50">
@@ -561,7 +469,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
                           {item.isBoosted && (
                             <div className="bg-sellit text-white px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1">
-                                <Zap size={10} fill="white" /> Priority
+                              <Zap size={10} fill="white" /> Priority
                             </div>
                           )}
                           {item.status === 'sold' ? (
@@ -573,7 +481,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                           )}
                         </div>
                         {!isOwner && item.status === 'available' && (
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); toggleSave(item.id); }}
                             className={`absolute top-3 left-3 p-2 rounded-xl transition-all z-10 ${isSaved ? 'bg-sellit text-white shadow-lg' : 'bg-white/80 text-gray-400 hover:text-sellit'}`}
                           >
@@ -587,10 +495,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <p className="text-[10px] md:text-xs text-gray-400 font-bold mt-1 md:mt-2 line-clamp-1">{item.description}</p>
                         <div className="flex items-center justify-between mt-3 md:mt-5 pt-3 border-t border-gray-50">
                           <div className="flex items-center gap-2">
-                             <span className={`text-sm md:text-xl font-black ${item.status !== 'available' ? 'text-gray-400' : 'text-gray-900'}`}>₦{item.price.toLocaleString()}</span>
+                            <span className={`text-sm md:text-xl font-black ${item.status !== 'available' ? 'text-gray-400' : 'text-gray-900'}`}>₦{item.price.toLocaleString()}</span>
                           </div>
                           {isOwner ? (
-                             <span className="text-[8px] md:text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md uppercase border border-gray-100">Mine</span>
+                            <span className="text-[8px] md:text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md uppercase border border-gray-100">Mine</span>
                           ) : (
                             item.isNegotiable && item.status === 'available' && <span className="text-[8px] md:text-[10px] font-black text-sellit bg-sellit/10 px-2 py-0.5 rounded-md uppercase">Negotiable</span>
                           )}
@@ -713,28 +621,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             )}
           </div>
           <div className="ml-4 flex items-center gap-2 md:gap-5 relative" ref={profileDropdownRef}>
-             <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-3 group focus:outline-none">
-               <div className="hidden sm:flex flex-col items-end transition-opacity group-hover:opacity-80"><span className="text-xs font-black text-gray-900">{user?.name || 'Obokobong'}</span><span className="text-[9px] font-black text-sellit uppercase tracking-widest">NDDC Hostel</span></div>
-               <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gray-50 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-100 group-hover:ring-sellit/30 transition-all"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" className="w-full h-full object-cover" alt="Profile" /></div>
-             </button>
-             {isProfileOpen && (
-               <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[100] ring-1 ring-black/5">
-                 <div className="p-6 border-b border-gray-50 bg-gray-50/30"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Signed in as</p><p className="text-sm font-black text-gray-900 truncate">{user?.email || 'ubokobong@gmail.com'}</p></div>
-                 <div className="p-2">
-                   <button onClick={() => { setIsProfileOpen(false); setActiveTab('Profile'); setSelectedListing(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"><UserCircle size={18} className="text-gray-400" /> My Profile</button>
-                   <button onClick={() => { setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"><Settings size={18} className="text-gray-400" /> Settings</button>
-                   <div className="h-px bg-gray-50 my-1 mx-2" />
-                   <button onClick={() => { setIsProfileOpen(false); onLogout(); setSelectedListing(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"><LogOut size={18} /> Sign Out</button>
-                 </div>
-               </div>
-             )}
+            <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-3 group focus:outline-none">
+              <div className="hidden sm:flex flex-col items-end transition-opacity group-hover:opacity-80"><span className="text-xs font-black text-gray-900">{user?.name || 'Obokobong'}</span><span className="text-[9px] font-black text-sellit uppercase tracking-widest">NDDC Hostel</span></div>
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gray-50 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-100 group-hover:ring-sellit/30 transition-all"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" className="w-full h-full object-cover" alt="Profile" /></div>
+            </button>
+            {isProfileOpen && (
+              <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[100] ring-1 ring-black/5">
+                <div className="p-6 border-b border-gray-50 bg-gray-50/30"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Signed in as</p><p className="text-sm font-black text-gray-900 truncate">{user?.email || 'ubokobong@gmail.com'}</p></div>
+                <div className="p-2">
+                  <button onClick={() => { setIsProfileOpen(false); setActiveTab('Profile'); setSelectedListing(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"><UserCircle size={18} className="text-gray-400" /> My Profile</button>
+                  <button onClick={() => { setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"><Settings size={18} className="text-gray-400" /> Settings</button>
+                  <div className="h-px bg-gray-50 my-1 mx-2" />
+                  <button onClick={() => { setIsProfileOpen(false); onLogout(); setSelectedListing(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"><LogOut size={18} /> Sign Out</button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
         <main ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto scrollbar-hide relative bg-[#F8FAFB] scroll-smooth">{renderContent()}</main>
-        
+
         {/* Hide floating AI button on Messages tab to avoid collision and redundancy with Human Desk */}
         {!isAssistantOpen && activeTab !== 'Messages' && (
-          <button 
+          <button
             onClick={() => setIsAssistantOpen(true)}
             className="fixed transition-all duration-500 ease-in-out z-[100] bg-sellit text-white w-14 h-14 md:w-16 md:h-16 rounded-[1.75rem] shadow-2xl shadow-sellit/40 flex items-center justify-center hover:scale-110 active:scale-90 group bottom-24 right-6 md:bottom-10 md:right-10 animate-in slide-in-from-right-8 duration-500"
           >
@@ -745,11 +653,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <AIAssistant isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} onSwitchToSupport={handleSwitchToSupport} />
       </div>
       {selectedListing && (
-        <ProductDetail 
-          listing={selectedListing} 
-          isOwner={selectedListing.seller === (user?.name || 'Obokobong')} 
-          onClose={() => setSelectedListing(null)} 
-          onContact={() => { startChat(selectedListing.seller, 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', { title: selectedListing.title, price: selectedListing.price, imageUrl: selectedListing.imageUrl }); setSelectedListing(null); }} 
+        <ProductDetail
+          listing={selectedListing}
+          isOwner={selectedListing.seller === (user?.name || 'Obokobong')}
+          onClose={() => setSelectedListing(null)}
+          onContact={() => { startChat(selectedListing.seller, 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', { title: selectedListing.title, price: selectedListing.price, imageUrl: selectedListing.imageUrl }); setSelectedListing(null); }}
           onMarkSold={(id) => { setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'sold' } : l)); setSelectedListing(null); showToast('Success', 'Item marked as sold.', 'success'); }}
           onEdit={() => { setEditingListing(selectedListing); setSelectedListing(null); }}
         />
