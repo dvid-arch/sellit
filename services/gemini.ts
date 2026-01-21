@@ -19,8 +19,8 @@ export class GeminiService {
   async generateDescription(itemName: string, condition: string): Promise<string> {
     return this.executeWithRetry(async () => {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      if (!apiKey || apiKey === 'your_actual_gemini_api_key') {
+        return "Description generation is disabled (API Key missing). Please check .env.local.";
       }
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
@@ -36,8 +36,9 @@ export class GeminiService {
   async suggestPrice(itemName: string, condition: string): Promise<number> {
     return this.executeWithRetry(async () => {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      if (!apiKey || apiKey === 'your_actual_gemini_api_key') {
+        console.warn('Gemini Key missing: Returning default price 0');
+        return 0;
       }
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
@@ -63,8 +64,8 @@ export class GeminiService {
   async getSmartAdvice(query: string, history: { role: string; content: string }[]): Promise<{ text: string; sources?: any[] }> {
     return this.executeWithRetry(async () => {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      if (!apiKey || apiKey === 'your_actual_gemini_api_key') {
+        return { text: "I can't access my brain right now! Please configure the VITE_GEMINI_API_KEY to enable AI features." };
       }
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
@@ -97,8 +98,8 @@ export class GeminiService {
   async interpretSearch(query: string): Promise<{ category?: string; minPrice?: number; maxPrice?: number; intent: string }> {
     return this.executeWithRetry(async () => {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('VITE_GEMINI_API_KEY environment variable is not set. Please add it to your .env file.');
+      if (!apiKey || apiKey === 'your_actual_gemini_api_key') {
+        return { intent: "Search functionality limited without API Key" };
       }
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
